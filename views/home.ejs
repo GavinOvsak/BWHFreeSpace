@@ -59,8 +59,8 @@
 
           $('#spaceList').append('<a href="/spot/'+spot.id+'"><div data-sid="'+sId+'" data-did="'+spot.id+'" style="width: calc(100% - 25px);border-radius: 10px;background-color: '+(open ? 'green' : '#b72020')+';color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">'+
             '  <h5 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">'+spot.name+(canEdit ? '<span class="glyphicon glyphicon-pencil editSpotName" style="margin-left: 5px;margin-right: 5px;font-size: 15px;"></span>':'')+' - <span style="">'+text+'</span></h5>'+
-            '  <h4 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 5px;padding-bottom: 6px;margin-right: 10px;float: right;font-size: 14px;'+((open || canEdit) ? '' : 'visibility: hidden;')+'" class="btn btn-default'+(!open ? ' cancel' : '')+'">'+(open ? 'Claim' : 'End')+'</h4>'+
             '  <span class="glyphicon glyphicon-remove removeSpot" style="float: right;display: inline-block;margin-right: 10px;font-size: 16px;margin-top: 8px;"></span>'+
+            '  <h4 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 5px;padding-bottom: 6px;margin-right: 10px;float: right;font-size: 14px;'+((open || canEdit) ? '' : 'visibility: hidden;')+'" class="btn btn-default'+(!open ? ' cancel' : '')+'">'+(open ? 'Claim' : 'End')+'</h4>'+
             '</div></a>');
         });
 
