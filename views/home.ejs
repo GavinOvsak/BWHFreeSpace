@@ -163,6 +163,7 @@
 
     $('.removeSpot').click(function(e) {
       e.stopPropagation();
+      e.preventDefault();
       var sId = $(this).closest('[data-sid]').attr('data-sid');
       var dId = $(this).closest('[data-did]').attr('data-did');
       backend.send('updateSpot', {
