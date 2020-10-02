@@ -34,16 +34,17 @@
       var html = ''+
       '<div data-sid="'+sId+'" class="toggleSpace" style="width: 100%;border-radius: 10px;background-color: lightgrey;color: black;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;">'+
       '  <span class="glyphicon glyphicon-chevron-'+(!!openSpaces[sId] ? 'down' : 'right')+'" style="font-size: 20px; margin-right: 6px; vertical-align: top; margin-top: 5px;"></span>'+
-      '  <h4 style="display: inline-block;margin-top: 0px;margin-bottom: 0px;vertical-align: top;margin-top: 8px;">'+item.name+' - <span style="color: '+(numOpen > 0 ? 'green' : '#b72020')+';">'+(numOpen > 0 ? numOpen : 'No')+ ' Spots Open</span></h4>'+
+      '  <h4 style="display: inline-block;margin-top: 0px;margin-bottom: 0px;vertical-align: top;margin-top: 8px;">'+item.name+(canEdit ? '<span class="glyphicon glyphicon-pencil editSpaceName" style="margin-left: 10px;font-size: 15px;"></span>':'')+' - <span style="color: '+(numOpen > 0 ? 'green' : '#b72020')+';">'+(numOpen > 0 ? numOpen : 'No')+ ' Spots Open</span></h4>'+
       (canEdit ? '  <h5 class="btn btn-danger removeSpace" style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;">'+
       '    <span class="glyphicon glyphicon-remove"></span>'+
-      '  </h5>'+
-      '  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-default">'+
-      '    <span class="glyphicon glyphicon-pencil"></span>'+
       '  </h5>':'')+
-      '  <a href="https://maps.brighamandwomens.org/index.html#home?q=dG89SW52X0JFSQ==" target="_blank"><h5 class="mapLink btn btn-default" style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;">'+
+      (canEdit ? '<div style="display: inline-block;margin-top: 0px;margin-right: 10px;float: right;" class="btn-group" role="group" aria-label="Basic example">'+
+      '    <button type="button" class="btn btn-default mapLink" style="padding-top: 10px; padding-bottom: 10px;"><span class="glyphicon glyphicon-map-marker"></span></button>'+
+      '    <button type="button" class="btn btn-default editMapLink" style="padding-top: 10px; padding-bottom: 10px;"><span class="glyphicon glyphicon-pencil"></span></button>'+
+      '  </div>':
+      '  <a class="noProp" href="'+item.link+'" target="_blank"><h5 class="btn btn-default" style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;">'+
       '    <span class="glyphicon glyphicon-map-marker"></span>'+
-      '  </h5></a>'+
+      '  </h5></a>')+ // https://maps.brighamandwomens.org/index.html#home?q=dG89SW52X0JFSQ==
       '</div>';
       $('#spaceList').append(html);
 
@@ -57,7 +58,7 @@
           var text = open ? 'Open' : 'Reserved by ' + lastBooking.name+ ' until ' + formatAMPM(endTime);
 
           $('#spaceList').append('<a href="/spot/'+spot.id+'"><div data-sid="'+sId+'" data-did="'+spot.id+'" style="width: calc(100% - 25px);border-radius: 10px;background-color: '+(open ? 'green' : '#b72020')+';color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">'+
-            '  <h5 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">'+spot.name+' - <span style="">'+text+'</span></h5>'+
+            '  <h5 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">'+spot.name+(canEdit ? '<span class="glyphicon glyphicon-pencil editSpotName" style="margin-left: 5px;margin-right: 5px;font-size: 15px;"></span>':'')+' - <span style="">'+text+'</span></h5>'+
             '  <h4 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 5px;padding-bottom: 6px;margin-right: 10px;float: right;font-size: 14px;'+((open || canEdit) ? '' : 'visibility: hidden;')+'" class="btn btn-default'+(!open ? ' cancel' : '')+'">'+(open ? 'Claim' : 'End')+'</h4>'+
             '</div></a>');
         });
@@ -78,16 +79,57 @@
         '</div>');
     }
 
+    $('.noProp').click(function(e) {
+      e.stopPropagation();
+    });
+
+    $('.editSpaceName').click(function(e) {
+      e.stopPropagation();
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      var space = spaceList[sId];
+      var spaceName = prompt('New name for '+space.name+'?');
+      if (spaceName == null || spaceName.trim().length == 0) return;
+      backend.send('updateSpace', {
+        sId: sId,
+        def: {
+          name: spaceName
+        }
+      });
+    });
+
+    $('.editSpotName').click(function(e) {
+      e.stopPropagation();
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      var dId = $(this).closest('[data-did]').attr('data-did');
+      var space = spaceList[sId];
+      var spot = space.spots[dId];
+      var spotName = prompt('New name for '+spot.name+'?');
+      if (spotName == null || spotName.trim().length == 0) return;
+      backend.send('updateSpot', {
+        sId: sId, dId: dId,
+        def: { name: spotName }
+      });
+    });
+
+    $('.editMapLink').click(function(e) {
+      e.stopPropagation();
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      var space = spaceList[sId];
+      var spaceLink = prompt('Location URL for '+space.name+'?');
+      if (spaceLink == null || spaceLink.trim().length == 0) return;
+      backend.send('updateSpace', {
+        sId: sId,
+        def: { link: spaceLink }
+      });
+    });
+
     $('.cancel').click(function(e) {
       e.preventDefault();
       var sId = $(this).closest('[data-sid]').attr('data-sid');
       var dId = $(this).closest('[data-did]').attr('data-did');
       backend.send('updateBooking', {
-        sId: sId,
-        dId: dId,
-        def: {
-          bookings: []
-        }
+        sId: sId, dId: dId,
+        def: { bookings: [] }
       });
     })
 
@@ -96,9 +138,7 @@
       if (spaceName == null || spaceName.trim().length == 0) return;
 
       backend.send('updateSpace', {
-        def: {
-          name: spaceName
-        }
+        def: { name: spaceName }
       });
     });
 
@@ -108,9 +148,7 @@
       if (spotName == null || spotName.trim().length == 0) return;
 
       backend.send('updateSpot', {
-        sId: sId, def: { 
-          name: spotName
-        }
+        sId: sId, def: { name: spotName }
       });
     });
 
@@ -129,9 +167,11 @@
     })
 
     $('.mapLink').click(function(e) {
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      var space = spaceList[sId];
+      window.location.href = space.link;
       e.stopPropagation();
-    })
-
+    });
   };
 
   socket = io({ timeout: 40000 });
@@ -234,7 +274,7 @@
       <span class="glyphicon glyphicon-pencil"></span>
   </h5>
   <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-default">
-      <span class="glyphicon glyphicon-map-marker"></span>
+    <span class="glyphicon glyphicon-map-marker"></span>
   </h5>
 </div>
 <div>
