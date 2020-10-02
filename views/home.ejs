@@ -100,6 +100,7 @@
 
     $('.editSpotName').click(function(e) {
       e.stopPropagation();
+      e.preventDefault();
       var sId = $(this).closest('[data-sid]').attr('data-sid');
       var dId = $(this).closest('[data-did]').attr('data-did');
       var space = spaceList[sId];
@@ -114,6 +115,7 @@
 
     $('.editMapLink').click(function(e) {
       e.stopPropagation();
+      e.preventDefault();
       var sId = $(this).closest('[data-sid]').attr('data-sid');
       var space = spaceList[sId];
       var spaceLink = prompt('Location URL for '+space.name+'?');

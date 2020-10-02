@@ -5,17 +5,6 @@ var express = require('express');
 var app = express();
 var port = process.env.PORT || 3306;
 
-var mongoURL = process.env.MONGODB_URI;
-var mongoose = require('mongoose');
-mongoose.connect(mongoURL, { 
-  useUnifiedTopology: true,
-  useNewUrlParser: true,
-  useFindAndModify: false
-});
-var db = mongoose.connection;
-mongoose.Promise = global.Promise;
-var File = mongoose.model('files', mongoose.Schema({ name: String, content: String }));
-
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var cors = require('cors');
@@ -23,13 +12,28 @@ var fs = require('fs');
 var _ = require('lodash');
 
 app.use(require('cookie-parser')());
-
 var bodyParser = require('body-parser');
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
+var mongoURL = process.env.MONGODB_URI;
+var mongoose = require('mongoose');
+mongoose.connect(mongoURL, { 
+  useUnifiedTopology: true, useNewUrlParser: true, useFindAndModify: false
+});
+var db = mongoose.connection;
+mongoose.Promise = global.Promise;
+var File = mongoose.model('files', mongoose.Schema({ name: String, content: String }));
 var session = require('express-session');
 var MongoDBStore = require('connect-mongodb-session')(session);
+
+var store = new MongoDBStore({
+  uri: mongoURL, collection: 'mySessions'
+});
+
+store.on('error', function(error) {
+  console.log('mongostore error', error);
+});
 
 var sessionOpts = {
   secret: 'spot',
@@ -37,27 +41,13 @@ var sessionOpts = {
     maxAge: 1000 * 60 * 60 * 24 // 1 day
   },
   resave: true,
-  saveUninitialized: true
+  saveUninitialized: true,
+  store: store
 };
-
-var store = new MongoDBStore({
-  uri: mongoURL,
-  collection: 'mySessions'
-});
-
-store.on('error', function(error) {
-  console.log('mongostore error', error);
-});
-
-sessionOpts.store = store;
-
 var sessionMiddleware = session(sessionOpts);
-
 io.use(function(socket, next){
-  // Wrap the express middleware
   sessionMiddleware(socket.request, {}, next);
 });
-
 app.use(sessionMiddleware);
 app.set('view engine', 'ejs');
 
@@ -76,7 +66,6 @@ var reload = function(file) {
   return require(file);
 };
 var buffers = {};
-// Need to be able to update the body network
 
 var stream = function(setIn, outCallback, opts) {
   opts = opts || {}; // Can log time lengths for callbacks
@@ -96,8 +85,7 @@ var stream = function(setIn, outCallback, opts) {
       label(data);
     } else {
       outCallback({
-        label: label,
-        data: data,
+        label: label, data: data,
         callbackNum: opt_callback != null ? lastCallbackNum : null
       }); 
     }
@@ -109,12 +97,11 @@ var stream = function(setIn, outCallback, opts) {
   }
 
   setIn(function(message) {
-    if (listeners[message.label] != null) {
-      for (var i = 0; i < listeners[message.label].length; i++) {
-        var response = listeners[message.label][i].callback(message.data, message.callbackNum);
-        if (response != null && message.callbackNum != null) {
-          that.send(message.callbackNum, response);
-        }
+    if (listeners[message.label] == null) return;
+    for (var i = 0; i < listeners[message.label].length; i++) {
+      var response = listeners[message.label][i].callback(message.data, message.callbackNum);
+      if (response != null && message.callbackNum != null) {
+        that.send(message.callbackNum, response);
       }
     }
   });
@@ -232,7 +219,7 @@ var ready = function() {
 
     client.listen('hello', function() {
       return spaceList;
-    })
+    });
 
     client.listen('updateSpot', function(data, callbackNum) {
       console.log('updateSpot', data);
@@ -310,7 +297,6 @@ var ready = function() {
   });
 };
 
-// if (localOnly) return ready();
 db.once('open', function() {
   var fileCursor = File.find({}).cursor();
   fileCursor.on('data', function(file) {
