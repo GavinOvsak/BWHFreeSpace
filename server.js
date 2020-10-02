@@ -66,11 +66,8 @@ var dbFileList = [
 ];
 
 var hostFiles = [
-  // 'data/adminLogs.json',
   'data/spaceList.js',
   'favicon.png',
-  'frontend/_Spot.js',
-  'frontend/_Dashboard.js',
   'favicon.ico',
 ];
 
@@ -81,12 +78,6 @@ var reload = function(file) {
 var buffers = {};
 // Need to be able to update the body network
 
-var after = function(before, after) {
-  before(function() {
-    after.apply(null, arguments);
-  });
-};
-
 var stream = function(setIn, outCallback, opts) {
   opts = opts || {}; // Can log time lengths for callbacks
 
@@ -95,19 +86,12 @@ var stream = function(setIn, outCallback, opts) {
   var that = this;
   this.send = function(label, data, opt_callback, opt_idCallback) {
     lastCallbackNum++;
-    if (_.isFunction(data)) {
-      // Can skip the data field if no interesting data to send
+    if (_.isFunction(data)) { // Can skip the data field if no interesting data to send
       opt_callback = data;
       data = {};
     }
-
-    if (opt_idCallback != null) {
-      opt_idCallback(lastCallbackNum);
-    }
-    if (opt_callback != null) {
-      listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
-    }
-
+    if (opt_idCallback != null) opt_idCallback(lastCallbackNum);
+    if (opt_callback != null) listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
     if (_.isFunction(label)) {
       label(data);
     } else {
@@ -129,7 +113,7 @@ var stream = function(setIn, outCallback, opts) {
       for (var i = 0; i < listeners[message.label].length; i++) {
         var response = listeners[message.label][i].callback(message.data, message.callbackNum);
         if (response != null && message.callbackNum != null) {
-        that.send(message.callbackNum, response);
+          that.send(message.callbackNum, response);
         }
       }
     }
@@ -219,6 +203,7 @@ var ready = function() {
 
   var clients = {};
   io.on('connection', function(socket) {
+
     var client = new stream(function(inCallback) {
       socket.on('message', inCallback);
     }, function(outMessage) {
