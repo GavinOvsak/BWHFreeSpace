@@ -165,7 +165,7 @@
       e.stopPropagation();
       var sId = $(this).closest('[data-sid]').attr('data-sid');
       var dId = $(this).closest('[data-did]').attr('data-did');
-      backend.send('updateSpace', {
+      backend.send('updateSpot', {
         sId: sId, dId: dId, def: null
       });
     });
