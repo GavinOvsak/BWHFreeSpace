@@ -26,10 +26,16 @@
   var dId = <%- JSON.stringify(dId); %>;
   var refresh = function() {
     var space = spaceList[sId];
-    if (space == null) window.location.href = '/';
+    if (space == null) {
+      debugger;
+      window.location.href = '/';
+    }
 
     var spot = space.spots[dId];
-    if (spot == null) window.location.href = '/';
+    if (spot == null) {
+      debugger;
+      window.location.href = '/';
+    }
 
     console.log(spot);
 
@@ -133,7 +139,7 @@
 
   var spaceList = {};
   $(function() {
-    refresh();
+    // refresh();
 
     backend.send('hello', function(data) {
       spaceList = data;
