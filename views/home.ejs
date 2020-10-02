@@ -197,25 +197,17 @@
     var that = this;
     this.send = function(label, data, opt_callback, opt_idCallback) {
       lastCallbackNum++;
-      if (_.isFunction(data)) {
-        // Can skip the data field if no interesting data to send
+      if (_.isFunction(data)) { // Can skip the data field if no interesting data to send
         opt_callback = data;
         data = {};
       }
-
-      if (opt_idCallback != null) {
-        opt_idCallback(lastCallbackNum);
-      }
-      if (opt_callback != null) {
-        listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
-      }
-
+      if (opt_idCallback != null) opt_idCallback(lastCallbackNum);
+      if (opt_callback != null) listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
       if (_.isFunction(label)) {
         label(data);
       } else {
         outCallback({
-          label: label,
-          data: data,
+          label: label, data: data,
           callbackNum: opt_callback != null ? lastCallbackNum : null
         }); 
       }
@@ -227,12 +219,11 @@
     }
 
     setIn(function(message) {
-      if (listeners[message.label] != null) {
-        for (var i = 0; i < listeners[message.label].length; i++) {
-          var response = listeners[message.label][i].callback(message.data, message.callbackNum);
-          if (response != null && message.callbackNum != null) {
+      if (listeners[message.label] == null) return;
+      for (var i = 0; i < listeners[message.label].length; i++) {
+        var response = listeners[message.label][i].callback(message.data, message.callbackNum);
+        if (response != null && message.callbackNum != null) {
           that.send(message.callbackNum, response);
-          }
         }
       }
     });

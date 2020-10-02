@@ -31,34 +31,40 @@ var spaceList =
   "spots": {
    "d194": {
     "id": "d194",
-    "name": "Spot 1",
+    "name": "Desk 1",
     "bookings": [
      {
-      "start": 1601668050508,
+      "start": 1601676700344,
       "len": 30,
-      "name": "GGO"
+      "name": "SM"
      }
     ]
    },
    "d63": {
     "id": "d63",
-    "name": "Spot 2",
-    "bookings": []
+    "name": "Desk 2",
+    "bookings": [
+     {
+      "start": 1601671120344,
+      "len": 30,
+      "name": "nc"
+     }
+    ]
    },
    "d130": {
     "id": "d130",
-    "name": "Spot 3",
+    "name": "Desk 3",
     "bookings": [
      {
-      "start": 1601665753860,
+      "start": 1601678015044,
       "len": 30,
-      "name": "GO"
+      "name": "GGO"
      }
     ]
    },
    "d90": {
     "id": "d90",
-    "name": "Spot 4",
+    "name": "Desk 4",
     "bookings": [
      {
       "start": 1601665744575,
@@ -69,12 +75,12 @@ var spaceList =
    },
    "d366": {
     "id": "d366",
-    "name": "Spot 5",
+    "name": "Desk 5",
     "bookings": []
    },
    "d371": {
     "id": "d371",
-    "name": "Spot 6",
+    "name": "Desk 6",
     "bookings": []
    }
   }

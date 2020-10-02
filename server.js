@@ -67,53 +67,6 @@ var reload = function(file) {
 };
 var buffers = {};
 
-var stream = function(setIn, outCallback, opts) {
-  opts = opts || {}; // Can log time lengths for callbacks
-
-  var listeners = {};
-  var lastCallbackNum = 0;
-  var that = this;
-  this.send = function(label, data, opt_callback, opt_idCallback) {
-    lastCallbackNum++;
-    if (_.isFunction(data)) { // Can skip the data field if no interesting data to send
-      opt_callback = data;
-      data = {};
-    }
-    if (opt_idCallback != null) opt_idCallback(lastCallbackNum);
-    if (opt_callback != null) listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
-    if (_.isFunction(label)) {
-      label(data);
-    } else {
-      outCallback({
-        label: label, data: data,
-        callbackNum: opt_callback != null ? lastCallbackNum : null
-      }); 
-    }
-  };
-
-  this.listen = function(label, callback) {
-    listeners[label] = listeners[label] || [];
-    listeners[label].push({callback: callback});
-  }
-
-  setIn(function(message) {
-    if (listeners[message.label] == null) return;
-    for (var i = 0; i < listeners[message.label].length; i++) {
-      var response = listeners[message.label][i].callback(message.data, message.callbackNum);
-      if (response != null && message.callbackNum != null) {
-        that.send(message.callbackNum, response);
-      }
-    }
-  });
-};
-
-var getNewId = function(list, prefix) {
-  var id = null;
-  var outOf = (Object.keys(list).length + 1) * 50;
-  while (id == null || list[prefix + id] != null) id = Math.round(Math.random() * outOf);
-  return prefix + id;
-}
-
 var ready = function() {
   var spaceList = reload('./data/spaceList.js');
 
@@ -309,3 +262,50 @@ db.once('open', function() {
     ready();
   })
 });
+
+function stream(setIn, outCallback, opts) {
+  opts = opts || {}; // Can log time lengths for callbacks
+
+  var listeners = {};
+  var lastCallbackNum = 0;
+  var that = this;
+  this.send = function(label, data, opt_callback, opt_idCallback) {
+    lastCallbackNum++;
+    if (_.isFunction(data)) { // Can skip the data field if no interesting data to send
+      opt_callback = data;
+      data = {};
+    }
+    if (opt_idCallback != null) opt_idCallback(lastCallbackNum);
+    if (opt_callback != null) listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
+    if (_.isFunction(label)) {
+      label(data);
+    } else {
+      outCallback({
+        label: label, data: data,
+        callbackNum: opt_callback != null ? lastCallbackNum : null
+      }); 
+    }
+  };
+
+  this.listen = function(label, callback) {
+    listeners[label] = listeners[label] || [];
+    listeners[label].push({callback: callback});
+  }
+
+  setIn(function(message) {
+    if (listeners[message.label] == null) return;
+    for (var i = 0; i < listeners[message.label].length; i++) {
+      var response = listeners[message.label][i].callback(message.data, message.callbackNum);
+      if (response != null && message.callbackNum != null) {
+        that.send(message.callbackNum, response);
+      }
+    }
+  });
+};
+
+function getNewId(list, prefix) {
+  var id = null;
+  var outOf = (Object.keys(list).length + 1) * 50;
+  while (id == null || list[prefix + id] != null) id = Math.round(Math.random() * outOf);
+  return prefix + id;
+};
