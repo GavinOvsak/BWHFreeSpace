@@ -1,0 +1,264 @@
+<html><head>
+<title>Free Space</title>
+
+<script src="/res/jquery.min.js"></script>
+<script src="/res/bootstrap.min.js"></script>
+<script src="/res/jquery-ui.js"></script>
+<script src="/res/lodash.min.js"></script>
+<script src="/res/jquery.query-object.js"></script>
+<script src="/data/spaceList.js?a=1"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<link rel="stylesheet" href="/res/bootstrap.min.css">
+<link rel="stylesheet" href="/res/jquery-ui.css">
+<script>
+  var canEdit = <%- edit %>;
+  var openSpaces = {};
+
+  var getLastBooking = function(spot) {
+    if (spot.bookings.length == null) spot.bookings = [];
+    var lastBooking = spot.bookings.slice(-1)[0];
+    if (lastBooking != null && (new Date(lastBooking.start) == 'Invalid Date' || (new Date(lastBooking.start)).getTime() + lastBooking.len * 1000*60) < Date.now()) {
+      lastBooking = null; // If invalid or ended in past, remove
+    }
+    return lastBooking;
+  }
+
+  var refresh = function() {
+    $('#spaceList').empty();
+    _.sortBy(_.values(spaceList), function(item) {
+      return -_.values(item.spots).filter(function(n) { return getLastBooking(n) == null;}).length;
+    }).map(function(item) {
+      var sId = item.id;
+      var numOpen = _.values(item.spots).filter(function(n) { return getLastBooking(n) == null;}).length;
+
+      var html = ''+
+      '<div data-sid="'+sId+'" class="toggleSpace" style="width: 100%;border-radius: 10px;background-color: lightgrey;color: black;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;">'+
+      '  <span class="glyphicon glyphicon-chevron-'+(!!openSpaces[sId] ? 'down' : 'right')+'" style="font-size: 20px; margin-right: 6px; vertical-align: top; margin-top: 5px;"></span>'+
+      '  <h4 style="display: inline-block;margin-top: 0px;margin-bottom: 0px;vertical-align: top;margin-top: 8px;">'+item.name+' - <span style="color: '+(numOpen > 0 ? 'green' : '#b72020')+';">'+(numOpen > 0 ? numOpen : 'No')+ ' Spots Open</span></h4>'+
+      (canEdit ? '  <h5 class="btn btn-danger removeSpace" style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;">'+
+      '    <span class="glyphicon glyphicon-remove"></span>'+
+      '  </h5>'+
+      '  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-default">'+
+      '    <span class="glyphicon glyphicon-pencil"></span>'+
+      '  </h5>':'')+
+      '  <a href="https://maps.brighamandwomens.org/index.html#home?q=dG89SW52X0JFSQ==" target="_blank"><h5 class="mapLink btn btn-default" style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;">'+
+      '    <span class="glyphicon glyphicon-map-marker"></span>'+
+      '  </h5></a>'+
+      '</div>';
+      $('#spaceList').append(html);
+
+      if (!!openSpaces[sId]) {
+        _.sortBy(_.values(item.spots), function(spot) {
+          return getLastBooking(spot) != null;
+        }).map(function(spot) {
+          var lastBooking = getLastBooking(spot);
+          var open = lastBooking == null;
+          var endTime = lastBooking == null ? null : new Date((new Date(lastBooking.start)).getTime() + lastBooking.len * 1000*60);
+          var text = open ? 'Open' : 'Reserved by ' + lastBooking.name+ ' until ' + formatAMPM(endTime);
+
+          $('#spaceList').append('<a href="/spot/'+spot.id+'"><div data-sid="'+sId+'" data-did="'+spot.id+'" style="width: calc(100% - 25px);border-radius: 10px;background-color: '+(open ? 'green' : '#b72020')+';color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">'+
+            '  <h5 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">'+spot.name+' - <span style="">'+text+'</span></h5>'+
+            '  <h4 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 5px;padding-bottom: 6px;margin-right: 10px;float: right;font-size: 14px;'+((open || canEdit) ? '' : 'visibility: hidden;')+'" class="btn btn-default'+(!open ? ' cancel' : '')+'">'+(open ? 'Claim' : 'End')+'</h4>'+
+            '</div></a>');
+        });
+
+        if (canEdit) {
+          $('#spaceList').append('<div class="newSpot" data-sid="'+sId+'" style="width: calc(100% - 25px);border-radius: 10px;background-color: #2197f3;color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">'+
+            '  <h4 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">+ New Spot</h4>'+
+            '  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 3px;padding-bottom: 6px;margin-right: 10px;float: right;visibility: hidden;" class="btn btn-default">Add</h5>'+
+            '</div>');
+        }
+      }
+    });
+
+    if (canEdit) {
+      $('#spaceList').append('<div class="newSpace" style="width: 100%;border-radius: 10px;background-color: #2197f3;color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;">'+
+        '  <h4 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">+ New Space</h4>'+
+        '  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 3px;padding-bottom: 6px;margin-right: 10px;float: right;visibility: hidden;" class="btn btn-default">Add</h5>'+
+        '</div>');
+    }
+
+    $('.cancel').click(function(e) {
+      e.preventDefault();
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      var dId = $(this).closest('[data-did]').attr('data-did');
+      backend.send('updateBooking', {
+        sId: sId,
+        dId: dId,
+        def: {
+          bookings: []
+        }
+      });
+    })
+
+    $('.newSpace').click(function() {
+      var spaceName = prompt('What is the name of the space?');
+      if (spaceName == null || spaceName.trim().length == 0) return;
+
+      backend.send('updateSpace', {
+        def: {
+          name: spaceName
+        }
+      });
+    });
+
+    $('.newSpot').click(function() {
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      var spotName = prompt('What is the name of this spot?');
+      if (spotName == null || spotName.trim().length == 0) return;
+
+      backend.send('updateSpot', {
+        sId: sId, def: { 
+          name: spotName
+        }
+      });
+    });
+
+    $('.removeSpace').click(function() {
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      backend.send('updateSpace', {
+        sId: sId, def: null
+      });
+    });
+
+    $('.toggleSpace').click(function() {
+      var sId = $(this).closest('[data-sid]').attr('data-sid');
+      openSpaces[sId] = !openSpaces[sId];
+      refresh();
+    })
+
+    $('.mapLink').click(function(e) {
+      e.stopPropagation();
+    })
+
+  };
+
+  socket = io({ timeout: 40000 });
+
+  function stream(setIn, outCallback, opts) {
+    opts = opts || {}; // Can log time lengths for callbacks
+
+    var listeners = {};
+    var lastCallbackNum = 0;
+    var that = this;
+    this.send = function(label, data, opt_callback, opt_idCallback) {
+      lastCallbackNum++;
+      if (_.isFunction(data)) {
+        // Can skip the data field if no interesting data to send
+        opt_callback = data;
+        data = {};
+      }
+
+      if (opt_idCallback != null) {
+        opt_idCallback(lastCallbackNum);
+      }
+      if (opt_callback != null) {
+        listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
+      }
+
+      if (_.isFunction(label)) {
+        label(data);
+      } else {
+        outCallback({
+          label: label,
+          data: data,
+          callbackNum: opt_callback != null ? lastCallbackNum : null
+        }); 
+      }
+    };
+
+    this.listen = function(label, callback) {
+      listeners[label] = listeners[label] || [];
+      listeners[label].push({callback: callback});
+    }
+
+    setIn(function(message) {
+      if (listeners[message.label] != null) {
+        for (var i = 0; i < listeners[message.label].length; i++) {
+          var response = listeners[message.label][i].callback(message.data, message.callbackNum);
+          if (response != null && message.callbackNum != null) {
+          that.send(message.callbackNum, response);
+          }
+        }
+      }
+    });
+  };
+
+  function formatAMPM(date) {
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    minutes = minutes < 10 ? '0'+minutes : minutes;
+    var strTime = hours + ':' + minutes + ' ' + ampm;
+    return strTime;
+  }
+
+  var backend = new stream(function(inCallback) {
+    socket.on('message', inCallback);
+  }, function(outMessage) {
+    socket.emit('message', outMessage);
+  });
+
+  $(function() {
+    refresh();
+
+    socket.on('update', function(data) {
+      spaceList = data;
+      refresh();
+    })
+  });
+</script>
+</head>
+<body>
+
+<h5 style="margin: 0; width: 100%; font-size: 25px; background-color: #2196F3; color: white; padding: 13px; box-shadow: 0 3px 4px #636363;">Free Space</h5>
+<div class="container">
+<div id="spaceList" style="margin-top: 20px;text-align: center;">
+
+<div style="width: 100%;border-radius: 10px;background-color: lightgrey;color: black;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;">
+  <span class="glyphicon glyphicon-chevron-down" style="font-size: 20px; margin-right: 6px; vertical-align: top; margin-top: 5px;"></span>
+  <h4 style="display: inline-block;margin-top: 0px;margin-bottom: 0px;vertical-align: top;margin-top: 8px;">BEI - <span style="color: green;">3 Spots Open</span></h4>
+  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-danger">
+      <span class="glyphicon glyphicon-remove"></span>
+  </h5>
+  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-default">
+      <span class="glyphicon glyphicon-pencil"></span>
+  </h5>
+  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-default">
+      <span class="glyphicon glyphicon-map-marker"></span>
+  </h5>
+</div>
+<div>
+  <div style="width: calc(100% - 25px);border-radius: 10px;background-color: green;color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">
+    <h5 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">Spot 21 - <span style="">Open</span></h5>
+    <h4 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 5px;padding-bottom: 6px;margin-right: 10px;float: right;font-size: 14px;" class="btn btn-default">Claim</h4>
+  </div>
+  <div style="width: calc(100% - 25px);border-radius: 10px;background-color: #b72020;color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">
+    <h4 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">Spot 21 - <span style="">Claimed until 3:10pm</span></h4>
+    <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 5px;padding-bottom: 6px;margin-right: 10px;float: right;visibility: hidden;" class="btn btn-default">Claim</h5>
+  </div>
+  <div style="width: calc(100% - 25px);border-radius: 10px;background-color: #2197f3;color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;margin-left: 25px;">
+    <h4 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">+ New Spot</h4>
+    <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 3px;padding-bottom: 6px;margin-right: 10px;float: right;visibility: hidden;" class="btn btn-default">Add</h5>
+  </div>
+</div>
+<div style="width: 100%;border-radius: 10px;background-color: lightgrey;color: black;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;">
+  <span class="glyphicon glyphicon-chevron-right" style="font-size: 20px; margin-right: 6px; vertical-align: top; margin-top: 5px;"></span>
+  <h4 style="display: inline-block;margin-top: 0px;margin-bottom: 0px;vertical-align: top;margin-top: 8px;">BEI - <span style="color: green;">3 Spots Open</span></h4>
+  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 10px;padding-bottom: 10px;margin-right: 10px;float: right;" class="btn btn-default">
+      <span class="glyphicon glyphicon-map-marker"></span>
+  </h5>
+</div>
+<div style="width: 100%;border-radius: 10px;background-color: #2197f3;color: white;margin-bottom: 10px;text-align: left;padding-left: 10px;padding-top: 6px;padding-bottom: 6px;display: inline-block;">
+  <h4 style="display: inline-block;margin-bottom: 0px;vertical-align: top;margin-top: 6px;font-size: 16px;">+ New Space</h4>
+  <h5 style="display: inline-block;margin-top: 0px;padding-left: 10px;padding-right: 10px;padding-top: 3px;padding-bottom: 6px;margin-right: 10px;float: right;visibility: hidden;" class="btn btn-default">Add</h5>
+</div>
+
+
+</div>
+
+</div>
+</body></html>

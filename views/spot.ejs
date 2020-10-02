@@ -1,0 +1,160 @@
+<html><head>
+<title>Spot Status</title>
+
+<script src="/res/jquery.min.js"></script>
+<script src="/res/bootstrap.min.js"></script>
+<script src="/res/jquery-ui.js"></script>
+<script src="/res/lodash.min.js"></script>
+<script src="/res/jquery.query-object.js"></script>
+<script src="/data/spaceList.js?a=1"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<link rel="stylesheet" href="/res/bootstrap.min.css">
+<link rel="stylesheet" href="/res/jquery-ui.css">
+
+</head>
+<script>
+  var getLastBooking = function(spot) {
+    if (spot.bookings.length == null) spot.bookings = [];
+    var lastBooking = spot.bookings.slice(-1)[0];
+    if (lastBooking != null && (new Date(lastBooking.start) == 'Invalid Date' || (new Date(lastBooking.start)).getTime() + lastBooking.len * 1000*60) < Date.now()) {
+      lastBooking = null; // If invalid or ended in past, remove
+    }
+    return lastBooking;
+  }
+
+  var sId = <%- JSON.stringify(sId); %>;
+  var dId = <%- JSON.stringify(dId); %>;
+  var refresh = function() {
+    var space = spaceList[sId];
+    if (space == null) window.location.href = '/';
+
+    var spot = space.spots[dId];
+    if (spot == null) window.location.href = '/';
+
+    console.log(spot);
+
+    $('#title').text(space.name + ' - ' + spot.name);
+
+    var lastBooking = getLastBooking(spot);
+
+    var endTime = lastBooking == null ? null : new Date((new Date(lastBooking.start)).getTime() + lastBooking.len * 1000*60);
+    var open = lastBooking == null;
+
+    $('#status').show();
+    $('#status').css('color', open ? 'green' : 'red')
+    $('#status').text((open ? 'Status: Open' : 'Currently Reserved by ' + lastBooking.name+ ' until ' + formatAMPM(endTime)));
+    $('#claimBox').toggle(open);
+
+    $('#claimButton').unbind('click').click(function() {
+      var name = prompt('Enter Your Initials:');
+      if (name == null || name.trim().length == 0) return;
+
+      backend.send('updateBooking', {
+        sId: sId,
+        dId: dId,
+        def: {
+          bookings: [{
+            start: Date.now(),
+            len: 30,
+            name: name
+          }]
+        }
+      });
+    });
+  };
+
+  socket = io({ timeout: 40000 });
+
+  function stream(setIn, outCallback, opts) {
+    opts = opts || {}; // Can log time lengths for callbacks
+
+    var listeners = {};
+    var lastCallbackNum = 0;
+    var that = this;
+    this.send = function(label, data, opt_callback, opt_idCallback) {
+      lastCallbackNum++;
+      if (_.isFunction(data)) {
+        // Can skip the data field if no interesting data to send
+        opt_callback = data;
+        data = {};
+      }
+
+      if (opt_idCallback != null) {
+        opt_idCallback(lastCallbackNum);
+      }
+      if (opt_callback != null) {
+        listeners[lastCallbackNum] = [{callback: opt_callback, sendTime: performance.now()}];
+      }
+
+      if (_.isFunction(label)) {
+        label(data);
+      } else {
+        outCallback({
+          label: label,
+          data: data,
+          callbackNum: opt_callback != null ? lastCallbackNum : null
+        }); 
+      }
+    };
+
+    this.listen = function(label, callback) {
+      listeners[label] = listeners[label] || [];
+      listeners[label].push({callback: callback});
+    }
+
+    setIn(function(message) {
+      if (listeners[message.label] != null) {
+        for (var i = 0; i < listeners[message.label].length; i++) {
+          var response = listeners[message.label][i].callback(message.data, message.callbackNum);
+          if (response != null && message.callbackNum != null) {
+          that.send(message.callbackNum, response);
+          }
+        }
+      }
+    });
+  };
+
+  function formatAMPM(date) {
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    minutes = minutes < 10 ? '0'+minutes : minutes;
+    var strTime = hours + ':' + minutes + ' ' + ampm;
+    return strTime;
+  }
+
+  var backend = new stream(function(inCallback) {
+    socket.on('message', inCallback);
+  }, function(outMessage) {
+    socket.emit('message', outMessage);
+  });
+
+  $(function() {
+    refresh();
+
+    socket.on('update', function(data) {
+      spaceList = data;
+      refresh();
+    })
+  });
+</script>
+<body>
+
+<h5 style="margin: 0; width: 100%; font-size: 25px; background-color: #2196F3; color: white; padding: 13px; box-shadow: 0 3px 4px #636363;"><span id="title"></span><a href="/"><div class="btn btn-default" style="float: right; margin-top: -3px;">See All</div></a></h5>
+<div class="container">
+  <div style="margin-top: 40px; text-align: center;">
+    <h4 id="status" style="color: red; display: none;">Status: Currently Reserved by GGO until 3:15pm</h4>
+    
+    <div id="claimBox" class="well" style="width: 300px; margin-top: 29px; padding-top: 10px; text-align: center; display: inline-block;">
+      <h4>Starting: Now</h4>
+      <h4>For: 30 min</h4>
+      <h5 id="claimButton" class="btn btn-primary">Claim This Spot</h5>
+    </div>
+  </div>
+</div>
+
+
+</body></html>
