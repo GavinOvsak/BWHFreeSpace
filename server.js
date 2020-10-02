@@ -77,10 +77,6 @@ var ready = function() {
     return newFile;
   }
 
-  app.get('/spaceList.js', nocache, function(req, res) {
-    res.send(makeFile('spaceList', cvList));
-  });
-
   var saveDefs = function(defs, file) {
     clearTimeout(buffers[file]);
     buffers[file] = setTimeout(function() {
