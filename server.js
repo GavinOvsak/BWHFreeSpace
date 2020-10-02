@@ -148,7 +148,7 @@ var ready = function() {
 
   var makeFile = function(fileName, fileData) {
     var newFile = 'var '+fileName+' = \n';
-    newFile += JSON.stringify(fileData, null, 0);
+    newFile += JSON.stringify(fileData, null, 1);
     newFile += "; \nif (typeof window === 'undefined') { module.exports = "+fileName+";}";
     return newFile;
   }
