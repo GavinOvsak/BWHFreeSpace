@@ -245,6 +245,10 @@ var ready = function() {
       }
     });
 
+    client.listen('hello', function() {
+      return spaceList;
+    })
+
     client.listen('updateSpot', function(data, callbackNum) {
       console.log('updateSpot', data);
 
