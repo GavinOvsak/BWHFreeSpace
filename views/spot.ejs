@@ -39,7 +39,7 @@
 
     console.log(spot);
 
-    $('#title').text(space.name + ' - ' + spot.name);
+    $('#title').text(space.name + ' - ' + spot.name).css('visibility','');
 
     var lastBooking = getLastBooking(spot);
 
@@ -154,7 +154,10 @@
 </script>
 <body>
 
-<h5 style="margin: 0; width: 100%; font-size: 25px; background-color: #2196F3; color: white; padding: 13px; box-shadow: 0 3px 4px #636363;"><span id="title"></span><a href="/"><div class="btn btn-default" style="float: right; margin-top: -3px;">See All</div></a></h5>
+<h5 style="margin: 0; width: 100%; font-size: 25px; background-color: #2196F3; color: white; padding: 13px; box-shadow: 0 3px 4px #636363;">
+  <span id="title" style="visibility: hidden;">Title</span>
+  <a href="/"><div class="btn btn-default" style="float: right; margin-top: -3px;">See All</div></a>
+</h5>
 <div class="container">
   <div style="margin-top: 40px; text-align: center;">
     <h4 id="status" style="color: red; display: none;">Status: Currently Reserved by GGO until 3:15pm</h4>
