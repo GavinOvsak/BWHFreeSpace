@@ -117,10 +117,10 @@
       var sId = $(this).closest('[data-sid]').attr('data-sid');
       var space = spaceList[sId];
       var spaceLink = prompt('Location URL for '+space.name+'?');
-      if (spaceLink == null || spaceLink.trim().length == 0) return;
+      if (spaceLink == null) return;
       backend.send('updateSpace', {
         sId: sId,
-        def: { link: spaceLink }
+        def: { link: spaceLink.trim() }
       });
     });
 
