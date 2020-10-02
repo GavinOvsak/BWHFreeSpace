@@ -49,7 +49,7 @@
     $('#status').show();
     $('#status').css('color', open ? 'green' : 'red')
     $('#status').text((open ? 'Status: Open' : 'Currently Reserved by ' + lastBooking.name+ ' until ' + formatAMPM(endTime)));
-    $('#claimBox').toggle(open);
+    $('#claimBox').css('display', open ? 'inline-block': 'none');
 
     $('#claimButton').unbind('click').click(function() {
       var name = prompt('Enter Your Initials:');
